@@ -25,6 +25,8 @@ import CreateBankTypeButton from '@/components/banktype/crud/CreateBankTypeButto
 import { useCreateReview } from '@/lib/actions/review';
 import { generateUniqueFileName } from '@/lib/utils/helpers';
 
+import { useRunModel } from '@/lib/actions/flask';
+
 interface FormValues {
   bank_statements: BankStatement[];
 }
@@ -55,6 +57,32 @@ export function BankStatementsDragAndDrop({
   const { data: session } = useSession();
   const router = useRouter();
   const [myData, setMyData] = useState<FormData | null>(null);
+
+  const runModelMutation = useRunModel(
+    async (data) => {
+      notifications.update({
+        id: 'model',
+        color: 'teal',
+        title: 'Running Model worked',
+        message: 'The review has been created successfully.',
+        icon: <IconCheck size={theme.fontSizes.md} />,
+        loading: false,
+        autoClose: 2000,
+      });
+    },
+    // onError callback
+    () => {
+      notifications.update({
+        id: 'review-create',
+        color: 'red',
+        title: 'Failed to run model',
+        message: 'An error occurred. Please try again.',
+        icon: <IconX size={theme.fontSizes.md} />,
+        loading: false,
+        autoClose: 2000,
+      });
+    }
+  );
 
   const createReviewMutation = useCreateReview(
     // onSuccess callback
@@ -148,7 +176,7 @@ export function BankStatementsDragAndDrop({
     // Assuming you keep track of files in a state variable
     form.values.bank_statements.forEach((statement) => {
       if (statement.file) {
-        formData.append('files[]', statement.file, `${statement.name}_${statement.type}`);
+        formData.append('files[]', statement.file, `${statement.name}`);
       }
     });
 
@@ -165,6 +193,11 @@ export function BankStatementsDragAndDrop({
       });
 
       console.log(formData);
+
+      await runModelMutation.mutateAsync({
+        reviewId: 'test',
+        formData,
+      });
 
       await createReviewMutation.mutate({
         name: generateUniqueFileName(),
